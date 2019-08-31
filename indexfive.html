@@ -1,0 +1,118 @@
+<html>
+<head>
+  <script src="https://unpkg.com/react@16/umd/react.development.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@16/umd/react-dom.development.js" crossorigin></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/react-router-dom/5.0.1/react-router-dom.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/axios/0.19.0/axios.js"></script>
+
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    nav{
+      display: flex;
+      justify-content: space-around;
+      }
+  </style>
+
+</head>
+<body bgcolor = grey>
+  <div id = "root"></div>
+
+  <script type = "text/babel">
+    const { createElement, Component } = React;
+    const { render } = ReactDOM;
+    const { Route, HashRouter, Switch, Link, Redirect } = ReactRouterDOM;
+    const urls = [
+          'https://acme-users-api-rev.herokuapp.com/api/companies',
+          'https://acme-users-api-rev.herokuapp.com/api/products',
+          'https://acme-users-api-rev.herokuapp.com/api/offerings'
+          ]
+
+    const Under5 = ({products, offerings, companies})=>{
+      return (
+        <div>
+          <p> Stuff Under $5 </p>
+        {
+          products.filter(product=> {
+            return product.suggestedPrice < 5
+            }).map( (product,idx) => {
+                return (
+                  <div key = {idx}>
+                    <li>{product.name}</li>
+                    <li>{product.suggestedPrice}</li>
+                    <hr />
+                  </div>
+                  )
+              })
+          }
+          </div>
+      )
+    }
+
+    const Over5 = ({products, companies, offerings})=>{
+      return (
+        <div>
+          <p> Stuff Over $5 </p>
+          { products.filter(product=> {
+            return product.suggestedPrice >= 5}).map( (product,idx) => {
+              return (
+                <div key = {idx}>
+                  <li>{product.name}</li>
+                  <li>{product.suggestedPrice}</li>
+                  <hr />
+                  </div>
+                  )
+            })
+          }
+        </div>
+      )
+    }
+
+    class App extends Component
+    {
+      constructor(){
+        super();
+        this.state = {
+          companies: [],
+          products: [],
+          offerings: []
+        };
+      }
+
+      async componentDidMount(){
+        const [companies, products, offerings] = (await Promise.all(urls.map( url => axios.get(url)))).map(list=>list.data);
+        if(!companies[0]) {return null}
+        //console.log(offerings[0])
+        await this.setState({companies, products, offerings});
+
+      }
+
+
+      render(){
+        const {companies, products, offerings} = this.state;
+        if(!companies[0]) {return "Loading"}
+        console.log(products[0])
+        const underCount = products.filter(product=>product.suggestedPrice<5).length;
+        const overCount = products.filter(product=>product.suggestedPrice>=5).length;
+        return (
+          <div>
+          <HashRouter>
+              <nav>
+              <Link to='/under5'> Under 5 ({underCount}) </Link>
+              <Link to='/over5'> Over 5 ({overCount}) </Link>
+              </nav>
+              <Switch>
+                <Route path='/under5' render = { () => <Under5 products = {products} companies = {companies} offerings = {offerings}  />} />
+                <Route path='/over5' render = { () => <Over5 products = {products} companies = {companies} offerings = {offerings} />} />
+                <Redirect to = '/under5' />
+              </Switch>
+            </HashRouter>
+            </div>
+        )
+      }
+    }
+
+    render( <App />, root);
+
+  </script>
+</body>
+</html>
