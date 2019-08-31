@@ -11,10 +11,19 @@
       display: flex;
       justify-content: space-around;
       }
+
+    .selected
+    {
+      padding: 1rem;
+      background-color: orange;
+      color: white;
+      border-radius: 10px;
+    }
   </style>
 
 </head>
-<body bgcolor = grey>
+<body >
+  <h1> Acme 5 Over / Under</h1>
   <div id = "root"></div>
 
   <script type = "text/babel">
@@ -27,18 +36,34 @@
           'https://acme-users-api-rev.herokuapp.com/api/offerings'
           ]
 
+    const list = (id, productId, offerings, companies)=>{
+      if(id !== productId)
+        return null
+      return (
+        offerings.filter(offer=>offer.productId === id).map( (offer, idx) => {
+                    return (
+                      <div key = {idx}>
+                        <p>
+                          Offered at ${offer.price} <br />
+                          From {companies.find(company=>company.id === offer.companyId).name}
+                        </p>
+
+                      </div>
+                      )
+                    })
+      )
+    }
     const Under5 = ({products, offerings, companies})=>{
       return (
         <div>
-          <p> Stuff Under $5 </p>
         {
           products.filter(product=> {
             return product.suggestedPrice < 5
             }).map( (product,idx) => {
                 return (
                   <div key = {idx}>
-                    <li>{product.name}</li>
-                    <li>{product.suggestedPrice}</li>
+                    <li><Link to = {`/under5/${product.id}`}> {product.name}</Link></li>
+                    <li>${product.suggestedPrice}</li>
                     <hr />
                   </div>
                   )
@@ -48,21 +73,65 @@
       )
     }
 
+    const ListUnder5 = (props  )=>{
+      const id = props.match.params.id;
+      const {products, companies, offerings} = props;
+
+      return (
+        <div>
+            { products.filter(product=> {
+            return product.suggestedPrice < 5}).map( (product,idx) => {
+              return (
+                <div key = {idx}>
+                  <li><Link to = { product.id === id ? '/under5' : `/under5/${product.id}`}>{product.name}</Link></li>
+                  <li>${product.suggestedPrice}</li>
+                  <hr />
+                  {list (id, product.id, offerings, companies)}
+                </div>
+                  )
+              })
+            }
+        </div>
+      )
+    }
+
+
     const Over5 = ({products, companies, offerings})=>{
       return (
         <div>
-          <p> Stuff Over $5 </p>
           { products.filter(product=> {
             return product.suggestedPrice >= 5}).map( (product,idx) => {
               return (
                 <div key = {idx}>
-                  <li>{product.name}</li>
-                  <li>{product.suggestedPrice}</li>
+                  <li><Link to = {`/over5/${product.id}`}>{product.name}</Link></li>
+                  <li>${product.suggestedPrice}</li>
                   <hr />
                   </div>
                   )
             })
           }
+        </div>
+      )
+    }
+
+    const ListOver5 = (props)=>{
+      const id = props.match.params.id;
+      const {products, companies, offerings} = props;
+
+      return (
+        <div>
+            { products.filter(product=> {
+            return product.suggestedPrice >= 5}).map( (product,idx) => {
+              return (
+                <div key = {idx}>
+                  <li><Link to = {product.id === id ? '/over5' : `/over5/${product.id}`}>{product.name}</Link></li>
+                  <li>${product.suggestedPrice}</li>
+                  <hr />
+                  {list (id, product.id, offerings, companies)}
+                </div>
+                  )
+              })
+            }
         </div>
       )
     }
@@ -74,35 +143,40 @@
         this.state = {
           companies: [],
           products: [],
-          offerings: []
+          offerings: [],
         };
       }
 
       async componentDidMount(){
         const [companies, products, offerings] = (await Promise.all(urls.map( url => axios.get(url)))).map(list=>list.data);
-        if(!companies[0]) {return null}
-        //console.log(offerings[0])
+        if(!companies[0])
+          {return null}
         await this.setState({companies, products, offerings});
-
       }
 
-
       render(){
-        const {companies, products, offerings} = this.state;
+        const {companies, products, offerings, randomArray} = this.state;
         if(!companies[0]) {return "Loading"}
-        console.log(products[0])
+
         const underCount = products.filter(product=>product.suggestedPrice<5).length;
         const overCount = products.filter(product=>product.suggestedPrice>=5).length;
         return (
           <div>
           <HashRouter>
               <nav>
-              <Link to='/under5'> Under 5 ({underCount}) </Link>
-              <Link to='/over5'> Over 5 ({overCount}) </Link>
-              </nav>
+                <Link className = "selected" to='/under5'> Under 5 ({underCount}) </Link>
+                <Link to='/over5'> Over 5 ({overCount}) </Link>
+             </nav>
               <Switch>
-                <Route path='/under5' render = { () => <Under5 products = {products} companies = {companies} offerings = {offerings}  />} />
-                <Route path='/over5' render = { () => <Over5 products = {products} companies = {companies} offerings = {offerings} />} />
+                <Route path='/under5' exact render = { () => <Under5 products = {products} companies = {companies} offerings = {offerings}  />} />
+
+                <Route path='/under5/:id' exact render = { (props) => <ListUnder5 {...props } products = {products} companies = {companies} offerings = {offerings} />} />
+
+                <Route path='/over5' exact render = { () => <Over5 products = {products} companies = {companies} offerings = {offerings} />} />
+
+                <Route path='/over5/:id' exact render = { (props) => <ListOver5 {...props } products = {products} companies = {companies} offerings = {offerings} />} />
+
+
                 <Redirect to = '/under5' />
               </Switch>
             </HashRouter>
